@@ -1,0 +1,138 @@
+.mg20 {
+  margin: 20px;
+}
+
+.my20 {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  width: auto;
+  height: auto;
+}
+
+.mr20 {
+  margin-right: 20px;
+}
+
+.container {
+  position: relative;
+  width: 600px;
+  margin: auto;
+}
+
+.preview {
+  max-width: 200px;
+}
+
+.btn-upload {
+  position: relative; /* Adjusted to relative for centering */
+  margin: 20px auto; /* Center horizontally */
+}
+
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  max-width: 50%;
+  vertical-align: middle;
+}
+
+.list-group {
+  padding: 0;
+  margin: 0;
+}
+
+.list-header {
+  margin-top: 10px !important;
+}
+
+.upload-message {
+  font-weight: bold;
+  color: #63a84e;
+}
+
+.upload-message.error {
+  color: #da4148;
+}
+
+.btn-choose {
+  margin-right: 10px !important;
+}
+
+.out {
+  display: flex;
+  flex-flow: column;
+  align-items: center;
+}
+
+.outtxt {
+  width: 600px;
+}
+
+.output-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px; /* Add gap between output1 and output2 */
+  margin-top: 20px;
+}
+.WithStyles\(ForwardRef\(LinearProgress\)\)-bar-18 {
+  border-radius: 5px;
+  background-color:#5f51b5;
+}
+
+.output1,
+.output2 {
+  flex: 1; /* Makes each output container take equal space */
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color:seashell;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+.btn-sq,
+.btn-pl {
+  margin-bottom: 10px;
+}
+
+@media (min-width: 600px) {
+  .MuiToolbar-regular {
+    min-height: 64px;
+    background-color: cadetblue;
+  }
+}
+.processing-time {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #1a90ff;
+}
+
+@media (max-width: 768px) {
+  .container {
+    width: auto;
+  }
+  
+  .btn-choose {
+    margin-right: 10px !important;
+  }
+  
+  .outtxt {
+    width: 100%;
+  }
+  
+  .file-name {
+    max-width: 30%;
+  }
+  
+  .button-handler {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+  }
+  
+  .button-handler .btn-sq,
+  .button-handler .btn-pl {
+    flex: 1;
+    margin-right: 100px;
+  }
+}

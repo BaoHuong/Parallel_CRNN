@@ -100,7 +100,7 @@ export default class AppFields extends Component {
               name="image"
               style={{ display: 'none' }}
               type="file"
-              accept="image/png, image/jpeg, image/gif"
+              accept="image/png, image/jpeg, image/gif, image/jpg"
               onChange={this.selectFile} />
             <Button
               className="btn-choose"

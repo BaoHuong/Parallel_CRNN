@@ -33,10 +33,11 @@ def forward_jit(input, output, mean, variance, shape, numKernel, epsilon=1e-5):
 
 # CUDA-compiled normalization forward pass
 @cuda.jit()
-def forward_cuda(input, output, mean, variance, shape, numKernel, epsilon=1e-5):
+def forward_cuda(input, output, mean, variance, shape, numKernel, epsilon=1e-5): # Added epsilon as an argument
     ir, ic = cuda.grid(2)
     if ir < numKernel and ic < shape[0] * shape[1]:
-        output[ir][ic] = (input[ir][ic] - mean[ir]) / np.sqrt(variance[ir] + epsilon)
+        # Use CUDA's sqrt function from the math library
+        output[ir][ic] = (input[ir][ic] - mean[ir]) / math.sqrt(variance[ir] + epsilon)
 
 # Example usage:
 w = 128
@@ -73,7 +74,7 @@ block_size = (16, 16)
 grid_size = (math.ceil(1 / block_size[0]), math.ceil((h * w) / block_size[1]))
 
 cuda_start = time.time()
-forward_cuda[grid_size, block_size](a, output_cuda, mean, variance, aSize, 1)
+forward_cuda[grid_size, block_size](a, output_cuda, mean, variance, aSize, 1, 1e-5) # Pass epsilon to forward_cuda
 cuda_end = time.time()
 
 print("Layer Normalization - CUDA")

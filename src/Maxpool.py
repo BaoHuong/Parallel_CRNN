@@ -25,7 +25,7 @@ class Maxpool():
     def forward_sequential(self, input, shape:Shape):
         resultShape = Shape(shape.h // self.sizeKernel.h, shape.w // self.sizeKernel.w)
         output = np.zeros((self.numKernel, resultShape.h* resultShape.w),dtype=float)
-        print(resultShape.h, resultShape.w)
+        # print(resultShape.h, resultShape.w)
        
         for ilayer in range(self.numKernel):
             temp = input[ilayer]
@@ -37,21 +37,10 @@ class Maxpool():
                 output[ilayer][i * resultShape.w + j] = np.amax(im_region, axis=(0, 1))
  
         
-        print(output.reshape((resultShape.h, resultShape.w)))
-        return output , resultShape
+        # print(output.reshape((resultShape.h, resultShape.w)))
+        return output , (resultShape.h, resultShape.w)
     
-    # @cuda.jit
-    # def forward_paralle(self, input, in_shape:Shape, output, out_shape):
-        
-    #     c, r = cuda.grid(2)
-
-    #     if (c < out_shape.w) and (r < out_shape.h): 
-    #         for ilayer in range(self.numKernel):
-    #             temp = input[ilayer]
-    #             temp = temp.reshape(in_shape.h, in_shape.w)                
-    #             output[ilayer][r * out_shape.w + c] = np.max(temp[r * self.sizeKernel.h : (r + 1) * self.sizeKernel.h, 
-    #                                                             c * self.sizeKernel.w : (c + 1) * self.sizeKernel.w])
-    
+  
 def forward_sequence_pure(input, in_shape, output, out_shape, size_kernel, num_layer):
     # print(resultShape-0, resultShape.w)
     for ilayer in range(num_layer):
@@ -69,7 +58,7 @@ def forward_sequence_pure(input, in_shape, output, out_shape, size_kernel, num_l
     
     return output       
     
-@jit(cache=True)    
+@jit()    
 def forward_sequential(input, in_shape, output, out_shape, size_kernel, num_layer):
     # print(resultShape-0, resultShape.w)
     for ilayer in range(num_layer):
@@ -87,7 +76,7 @@ def forward_sequential(input, in_shape, output, out_shape, size_kernel, num_laye
     
     return output   
     
-@cuda.jit
+@cuda.jit()
 def forward_paralle(input, in_shape, output, out_shape, size_kernel, num_layer):
     
     r,c = cuda.grid(2)
@@ -103,62 +92,3 @@ def forward_paralle(input, in_shape, output, out_shape, size_kernel, num_layer):
                         max = input[ilayer][ik * in_shape[1] + jk]
                         
             output[ilayer][r*out_shape[1]+c] = max
-                        
-
-
-layer = Maxpool(1,Shape(2,2))
-
-h = 32
-w = 128
-
-a = np.random.randint(0, 256 ,(1, w * h)) 
-# print(a.reshape(h, w))
-a_size = Shape(h, w)
-
-s_start = time.time()
-output_seq, shape_out = layer.forward_sequential(a, a_size)
-s_end = time.time()
-# print(output_seq)
-# print(f'({shape_out.h},{shape_out.w})' )
-# print(f'sequential time: {s_end - s_start}')
-
-
-output_paral = np.empty((layer.numKernel, shape_out.w*shape_out.h), dtype=float)
-block_size = (32, 16)
-# print(f'({shape_out.h // block_size[0] + 1}, {shape_out.w // block_size[1] + 1})')
-# grid_h, grid_w = shape_out.h // block_size[0] + 1,shape_out.w // block_size[1] + 1
-# grid_size = (grid_h, grid_w)
-grid_size = (math.ceil(shape_out.h / block_size[0]),
-             math.ceil(shape_out.w / block_size[1]))
-# print(grid_size)
-
-d_a = cuda.to_device(a)
-start = time.time()
-forward_paralle[grid_size, block_size](d_a, (h, w), output_paral, (shape_out.h, shape_out.w), (2,2), 1)
-end = time.time()
-
-output_jit = np.empty((layer.numKernel, shape_out.w*shape_out.h), dtype=float)
-jit_start_1 = time.time()
-forward_sequential(a, (h, w), output_jit, (shape_out.h, shape_out.w), (2,2), 1)
-jit_end_1 = time.time()
-
-
-jit_start = time.time()
-forward_sequential(a, (h, w), output_jit, (shape_out.h, shape_out.w), (2,2), 1)
-jit_end = time.time()
-
-
-pure_start = time.time()
-forward_sequence_pure(d_a, (h, w), output_paral, (shape_out.h, shape_out.w), (2,2), 1)
-pure_end = time.time()
-
-print('\n\nLayer Maxpool')
-print(f'sequential time:\t{s_end - s_start}')
-print(f'time seq pure:\t{pure_end - pure_start}')
-print(f'time parallel jit decorate:\t{jit_end_1 - jit_start_1}')
-print(f'time parallel jit decorate + cache:\t{jit_end - jit_start}')
-print(f'time parallel cuda.jit decorate:\t{end - start}')
-
-
-print(f'Error seq and cuda: \t{np.sum(abs(output_paral- output_seq))}')
-print(f'Errorseq and jit: \t{np.sum(abs(jit_end - jit_end))}')

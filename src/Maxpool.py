@@ -92,3 +92,32 @@ def forward_paralle(input, in_shape, output, out_shape, size_kernel, num_layer):
                         max = input[ilayer][ik * in_shape[1] + jk]
                         
             output[ilayer][r*out_shape[1]+c] = max
+      
+@cuda.jit()
+def forward_paralle(input, in_shape, output, out_shape, size_kernel, num_layer):
+    
+    r,c = cuda.grid(2)
+    # r = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
+    # c = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+
+    if (c < out_shape[1]) and (r < out_shape[0]): 
+        for ilayer in range(num_layer):
+            max = input[ilayer][(r * size_kernel[0])*in_shape[1]  +  c * size_kernel[1]]             
+            for ik in range(r * size_kernel[0], (r + 1) * size_kernel[0]): 
+                for jk in range(c * size_kernel[1] , (c + 1) * size_kernel[1]):
+                    if max < input[ilayer][ik * in_shape[1] + jk]:
+                        max = input[ilayer][ik * in_shape[1] + jk]
+                        
+            output[ilayer][r*out_shape[1]+c] = max
+            
+@cuda.jit()
+def forward_3D(input, in_shape, output, out_shape, size_kernel, num_layer):
+    l,r,c = cuda.grid(3)
+    if (c < out_shape[1]) and (r < out_shape[0]) and (l < num_layer): 
+        max = input[l][(r * size_kernel[0])*in_shape[1]  +  c * size_kernel[1]]             
+        for ik in range(r * size_kernel[0], (r + 1) * size_kernel[0]): 
+            for jk in range(c * size_kernel[1] , (c + 1) * size_kernel[1]):
+                if max < input[l][ik * in_shape[1] + jk]:
+                    max = input[l][ik * in_shape[1] + jk]          
+        output[l][r*out_shape[1]+c] = max        
+

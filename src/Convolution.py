@@ -108,3 +108,57 @@ def CNN_forward(input, in_shape, in_layer, output, out_shape, num_layer, size_ke
                         c = ic + ick
                         value += input[i][r * in_shape[1] + c] * weight[ilayer][irk * size_kernel[1]+ ick]
             output[ilayer][ir * out_shape[1] + ic] = (value + bias[ilayer]) if value + bias[ilayer] > 0 else 0
+
+# if version parallel use 2-dimension-gird, this parallelism version use gird 3d to optimize
+# In version 2D, the variable row and column correspond to the output index of one layer. We must use a loop to calculate the result of all layer
+# Follow this way don't use GPU effectively, so instead of using 2d block, we can use 3d block. 
+# In using block 3d, indexes are layer, row, and column in the matrix output result 
+@cuda.jit()
+def CNN_forward_3D_v1(input, in_shape, in_layer, output, out_shape, num_layer, size_kernel, weight, bias):
+    il, ir, ic = cuda.grid(3)   
+    if (ir < out_shape[0]) and (ic < out_shape[1]) and (il < num_layer): 
+        value = 0
+        for i in range(in_layer):
+            for irk in range(size_kernel[0]):
+                for ick in range(size_kernel[1]):
+                    r = ir + irk
+                    c = ic + ick
+                    value += input[i][r * in_shape[1] + c] * weight[il][irk * size_kernel[1]+ ick]
+        output[il][ir * out_shape[1] + ic] = (value + bias[il]) if value + bias[il] > 0 else 0
+
+
+@cuda.jit()
+def CNN_sharemem_v1(input, in_shape, in_layer, output, out_shape, num_layer, size_kernel, weight, bias):
+    il, ir, ic = cuda.grid(3)   
+    shared = cuda.shared.array((32, 32), dtype=input.dtype)
+    icol = ic - size_kernel[0] + 1
+    irow = ir - size_kernel[0] +1
+    
+    if (ir < out_shape[0]) and (ic < out_shape[1])and(il< in_layer):
+        for layer in range(in_layer):
+            shared[il][ir * in_shape[1] + ic] = input[il][ir * in_shape[1] + ic]        
+    cuda.synchronize()
+        
+    if (ir < out_shape[0]) and (ic < out_shape[1]) and (il < num_layer): 
+        value = 0
+        for i in range(in_layer):
+            for irk in range(size_kernel[0]):
+                for ick in range(size_kernel[1]):
+                    r = ir + irk
+                    c = ic + ick
+                    value += input[i][r * in_shape[1] + c] * weight[il][irk * size_kernel[1]+ ick]
+        output[il][ir * out_shape[1] + ic] = (value + bias[il]) if value + bias[il] > 0 else 0
+
+
+# @cuda.jit()
+# def CNN_forward_3D_v2(input, in_shape, in_layer, output, out_shape, num_layer, size_kernel, weight, bias):
+#     ir, ic, ivalue = cuda.grid(3)   
+#     if (ir < out_shape[0]) and (ic < out_shape[1]) and (ivalue < in_layer): 
+#         for ilayer in range(num_layer):
+#             value = 0
+#             for irk in range(size_kernel[0]):
+#                 for ick in range(size_kernel[1]):
+#                     r = ir + irk
+#                     c = ic + ick
+#                     value += input[ivalue][r * in_shape[1] + c] * weight[ilayer][irk * size_kernel[1]+ ick]
+#             output[ilayer][ir * out_shape[1] + ic] = (value + bias[ilayer]) if value + bias[ilayer] > 0 else 0

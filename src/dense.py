@@ -83,6 +83,24 @@ def forward_cuda_optimized(input, weight, bias, output):
     if row < output.shape[0] and col < output.shape[1]:
         output[row, col] = max(0, val + bias[col])
 
+@cuda.jit
+def forward_dense_constMem(input, output, weight, bias, input_size, output_size):
+
+    # Access constant memory for weights and biases
+    c_weight = cuda.const.array_like(weight)
+    c_bias = cuda.const.array_like(bias)
+
+    row, col = cuda.grid(2)
+    
+    if row < input.shape[0] and col < output.shape[1]:
+        value = 0.0
+        
+        for i in range(input_size):
+            value += input[row, i] * c_weight[i, col]
+        
+        # Apply ReLU activation function
+        output[row, col] = max(0, value + c_bias[col])
+
 
 # Generating synthetic data
 input_size = 512  # Size based on previous layer output shape (4, 32, 512)
@@ -126,18 +144,32 @@ cuda_start_optimized = time.time()
 forward_cuda_optimized[blockspergrid, threadsperblock](input_data, dense_layer.weight, dense_layer.bias, output_cuda_optimized)
 cuda_end_optimized = time.time()
 
-# Timing and Error Analysis
-print("Optimized CUDA Dense Layer Execution Time")
-print(f"Time CUDA Optimized: {cuda_end_optimized - cuda_start_optimized}")
-print(f"Error between Sequential and CUDA shared memory: {np.mean(np.abs(output_seq - output_cuda_optimized))}")
+
+
+# Prepare output array
+output_cuda_const = np.zeros((batch_size, output_size), dtype=np.float32)
+
+threadsperblock = (16, 16)
+blockspergrid_x = int(np.ceil(batch_size / threadsperblock[0]))
+blockspergrid_y = int(np.ceil(output_size / threadsperblock[1]))
+blockspergrid = (blockspergrid_x, blockspergrid_y)
+
+# Measure execution time for CUDA with constant memory
+cuda_start_const = time.time()
+forward_dense_constMem[blockspergrid, threadsperblock](input_data, output_cuda_const, dense_layer.weight, dense_layer.bias, input_size, output_size)
+cuda_end_const = time.time()
+
 
 # Timing and Error Analysis
 print("Dense Layer Execution Times")
 print(f"Time Sequential: {seq_end - seq_start}")
 print(f"Time JIT: {jit_end - jit_start}")
 print(f"Time CUDA: {cuda_end - cuda_start}")
-#print(f"Time CUDA 3D Block: {cuda_end_3d - cuda_start_3d}")
+print(f"Time CUDA shared memory: {cuda_end_optimized - cuda_start_optimized}")
+print(f"Time CUDA Const: {cuda_end_const - cuda_start_const}")
 
 print(f"Error between Sequential and JIT: {np.mean(np.abs(output_seq - output_jit))}")
 print(f"Error between Sequential and CUDA: {np.mean(np.abs(output_seq - output_cuda))}")
-#print(f"Error between Sequential and CUDA 3D: {np.sum(np.abs(output_seq - output_cuda_3d.transpose(0, 2, 1)))}")  # Transpose output_cuda_3d for comparison
+print(f"Error between Sequential and CUDA shared : {np.mean(np.abs(output_seq - output_cuda_optimized))}")
+
+print(f"Error between Sequential and CUDA Const : {np.mean(np.abs(output_seq - output_cuda_const))}")

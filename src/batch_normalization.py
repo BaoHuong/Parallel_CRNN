@@ -46,6 +46,17 @@ def forward_batchnorm_cuda(input, gamma, beta, mean, var, epsilon, output):
         normalized_input = inp_val / math.sqrt(var_eps)
         output[i, j] = gamma[j] * normalized_input + beta[j]
 
+@cuda.jit
+def forward_batchnorm_cuda_3D(input, gamma, beta, mean, var, epsilon, output):
+    i, j, k = cuda.grid(3)
+    if i < input.shape[0] and j < input.shape[1] and k == 0:  # Use k as a dummy dimension
+        # Use double precision for all operations
+        inp_val = input[i, j] - mean[j]
+        var_eps = var[j] + epsilon
+        normalized_input = inp_val / math.sqrt(var_eps)
+        output[i, j] = gamma[j] * normalized_input + beta[j]
+
+
 # Generating synthetic data
 input_size = 512  # Size based on previous layer output shape
 batch_size = 256
@@ -70,16 +81,29 @@ jit_end = time.time()
 # CUDA Execution
 output_bn_cuda = np.zeros_like(input_data)
 
+# Define 2D grid and block dimensions
 threadsperblock = (16, 16)
 blockspergrid_x = int(np.ceil(batch_size / threadsperblock[0]))
 blockspergrid_y = int(np.ceil(input_size / threadsperblock[1]))
 blockspergrid = (blockspergrid_x, blockspergrid_y)
-
 cuda_start = time.time()
 forward_batchnorm_cuda[blockspergrid, threadsperblock](input_data, batchnorm_layer.gamma, batchnorm_layer.beta, batch_mean, batch_var, batchnorm_layer.epsilon, output_bn_cuda)
 cuda_end = time.time()
 
-# Prepare output array
+# Assuming input_data has shape (batch_size, height, width)
+
+output_bn_cuda_3D = np.zeros_like(input_data)
+
+# Define 3D grid and block dimensions
+threadsperblock = (8, 8, 8)
+blockspergrid_x = int(np.ceil(batch_size / threadsperblock[0]))
+blockspergrid_y = int(np.ceil(input_size / threadsperblock[1]))
+blockspergrid_z = 1  # k dimension is just a dummy to facilitate 3D block structure
+blockspergrid = (blockspergrid_x, blockspergrid_y, blockspergrid_z)
+
+cuda_start_3D = time.time()
+forward_batchnorm_cuda[blockspergrid, threadsperblock](input_data, batchnorm_layer.gamma, batchnorm_layer.beta, batch_mean, batch_var, batchnorm_layer.epsilon, output_bn_cuda_3D)
+cuda_end_3D = time.time()
 
 
 
@@ -88,7 +112,9 @@ print("BatchNormalization Execution Times")
 print(f"Time Sequential (Training): {seq_end - seq_start}")
 print(f"Time JIT: {jit_end - jit_start}")
 print(f"Time CUDA: {cuda_end - cuda_start}")
+print(f"Time CUDA 3D: {cuda_end_3D - cuda_start_3D}")
 
 # Calculating Errors
 print(f"Error between Sequential (Training) and JIT: {np.mean(np.abs(output_bn_seq_train - output_bn_jit))}")
 print(f"Error between Sequential (Training) and CUDA: {np.mean(np.abs(output_bn_seq_train - output_bn_cuda))}")
+print(f"Error between Sequential (Training) and CUDA: {np.mean(np.abs(output_bn_seq_train - output_bn_cuda_3D))}")

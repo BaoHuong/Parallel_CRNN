@@ -8,7 +8,7 @@ from torch.nn import CTCLoss
 
 from dataset import Synth90kDataset, synth90k_collate_fn
 from model import CRNN
-from evaluate import evaluate
+from evalutate import evaluate
 from config import train_config as config
 
 

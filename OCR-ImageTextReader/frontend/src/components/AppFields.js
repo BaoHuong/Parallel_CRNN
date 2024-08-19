@@ -28,9 +28,11 @@ export default class AppFields extends Component {
       previewImage: undefined,
       progress: 0,
       imgtxt: "",
+      imgtxt1: "",
       message: "",
       isError: false,
-      processingTime: 0,  // Add processingTime to state
+      processingTime: 0,
+      processingTime1: 0,  // Add processingTime to state
     };
   }
 
@@ -42,8 +44,10 @@ export default class AppFields extends Component {
       previewImage: URL.createObjectURL(event.target.files[0]),
       progress: 0,
       imgtxt: "",
+      imgtxt1: "",
       message: "",
-      processingTime: 0  // Reset processingTime
+      processingTime: 0,
+      processingTime1: 0,  // Reset processingTime
     });
   }
 
@@ -62,9 +66,11 @@ export default class AppFields extends Component {
         console.log(response.data);  // Debug print
         this.setState({
           imgtxt: response.data.text,
+          imgtxt1: response.data.text1,
           message: response.data.message,
           isError: false,
-          processingTime: response.data.processing_time // Update processingTime
+          processingTime: response.data.processing_time,
+          processingTime1: response.data.processing_time1 // Update processingTime
         });
       })
       .catch((err) => {
@@ -74,8 +80,10 @@ export default class AppFields extends Component {
           message: "Timeout!, processing the image took more time",
           currentFile: undefined,
           imgtxt: "",
+          imgtxt1: "",
           isError: true,
-          processingTime: 0  // Reset processingTime on error
+          processingTime: 0,
+          processingTime1: 0   // Reset processingTime on error
         });
       });
   }
@@ -87,8 +95,10 @@ export default class AppFields extends Component {
       progress,
       message,
       imgtxt,
+      imgtxt1,
       isError,
-      processingTime  // Destructure processingTime from state
+      processingTime,
+      processingTime1  // Destructure processingTime from state
     } = this.state;
 
     return (
@@ -134,22 +144,21 @@ export default class AppFields extends Component {
                 {message}
               </Typography>
             )}
-
-            <div className="output-container">
-              <div className="output1">
-                <Button
+            <Button
                   className="btn-sq"
                   color="primary"
                   variant="contained"
                   component="span"
                   disabled={!currentFile}
                   onClick={this.upload}>
-                  Sequent
+                  Start Predict
                 </Button>
+            <div className="output-container">
+              <div className="output1">
                 <Box mt={7}>
                   <TextField
                     id="outlined-textarea"
-                    label="Text from the Image"
+                    label="Text from image with parallelization"
                     className="outtxt"
                     value={imgtxt}
                     placeholder="Text"
@@ -164,29 +173,20 @@ export default class AppFields extends Component {
                 )}
               </div>
               <div className="output2">
-                <Button
-                  className="btn-pl"
-                  color="primary"
-                  variant="contained"
-                  component="span"
-                  disabled={!currentFile}
-                  onClick={this.handleSecondButtonClick}>
-                  Parallel
-                </Button>
                 <Box mt={7}>
                   <TextField
                     id="outlined-textarea1"
-                    label="Text from the Image"
+                    label="Text from image with sequence"
                     className="outtxt"
-                    value={""}
+                    value={imgtxt1}
                     placeholder="Text"
                     multiline
                     variant="outlined"
                   />
                 </Box>
-                {processingTime > 0 && (
+                {processingTime1 > 0 && (
                   <Typography variant="subtitle2" className="processing-time">
-                    Processing time: 0s
+                    Processing time: {processingTime1.toFixed(5)}s
                   </Typography>
                 )}
               </div>

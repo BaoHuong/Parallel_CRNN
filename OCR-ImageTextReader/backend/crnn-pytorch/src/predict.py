@@ -1,12 +1,3 @@
-"""Usage: predict.py [-m MODEL] [-s BS] [-d DECODE] [-b BEAM] [IMAGE ...]
-
--h, --help    show this
--m MODEL     model file [default: ./checkpoints/crnn_synth90k.pt]
--s BS       batch size [default: 256]
--d DECODE    decode method (greedy, beam_search or prefix_beam_search) [default: beam_search]
--b BEAM   beam size [default: 10]
-
-"""
 from docopt import docopt
 import torch
 from tqdm import tqdm
@@ -50,7 +41,7 @@ def show_result(paths, preds):
     return text
 
 
-def processing(path):
+def processing(path):   
    
 
     images = path
